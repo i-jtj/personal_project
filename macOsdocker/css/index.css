@@ -1,0 +1,57 @@
+:root{
+    --i:1
+}
+*{
+    margin: 0;
+    padding: 0;
+}
+body{
+    background: url(../images/bg.jpg) no-repeat center top;
+    background-size: cover;
+}
+.docker-container{
+    position: fixed;
+    bottom: 10px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.docker-container .docker{
+    box-sizing: content-box;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: end;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.docker-container .docker .menu{
+    display: flex;
+    align-items: end;
+}
+
+.docker-container .docker .menu .menu-item{
+    border-radius: 5px;
+    width:calc(var(--i,1) * 30px);
+    height:calc(var(--i,1) * 30px);
+    margin-bottom: calc(var(--i,1) * 15px - 15px);
+    background: #b4433d;
+    transition: all .1s;
+}
+
+.docker-container .docker .menu .gap{
+    height: 100%;
+    width:calc(var(--i,1) * 10px);
+    height: 30px;
+}
+
+.docker-container .docker .menu .menu-item:nth-child(3n){
+    background-color: #1a862a;
+}
+
+.docker-container .docker .menu .menu-item:nth-child(3n+2){
+    background-color: #e8ad2d;
+}
