@@ -19,12 +19,12 @@ body{
 
 .docker-container .docker{
     box-sizing: content-box;
-    height: 30px;
+    height: 50px;
     display: flex;
     justify-content: center;
     align-items: end;
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 10px;
     background-color: rgba(255, 255, 255, 0.5);
 }
 
@@ -34,24 +34,28 @@ body{
 }
 
 .docker-container .docker .menu .menu-item{
-    border-radius: 5px;
-    width:calc(var(--i,1) * 30px);
-    height:calc(var(--i,1) * 30px);
+    border-radius: 6px;
+    width:calc(var(--i,1) * 50px);
+    height:calc(var(--i,1) * 50px);
     margin-bottom: calc(var(--i,1) * 15px - 15px);
-    background: #b4433d;
+    /* background: #b4433d; */
     transition: all .1s;
+}
+
+.docker-container .docker .menu .menu-item img{
+    width: 100%;
 }
 
 .docker-container .docker .menu .gap{
     height: 100%;
     width:calc(var(--i,1) * 10px);
-    height: 30px;
+    height: 50px;
 }
 
-.docker-container .docker .menu .menu-item:nth-child(3n){
+/* .docker-container .docker .menu .menu-item:nth-child(3n){
     background-color: #1a862a;
 }
 
 .docker-container .docker .menu .menu-item:nth-child(3n+2){
     background-color: #e8ad2d;
-}
+} */
