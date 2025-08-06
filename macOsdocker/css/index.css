@@ -6,7 +6,7 @@
     padding: 0;
 }
 body{
-    background: url(../images/bg.jpg) no-repeat center top;
+    background: url(../images/bg1.jpg) no-repeat center top;
     background-size: cover;
 }
 .docker-container{
