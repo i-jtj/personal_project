@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级3D激光舞台编辑器</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #editor-ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            pointer-events: none;
+        }
+        #toolbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: auto;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            max-width: 80%;
+        }
+        #timeline-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            pointer-events: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #parameter-panel {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            padding: 10px;
+            pointer-events: auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        button, select, input {
+            padding: 8px 12px;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+        button.active {
+            background: #0078ff;
+        }
+        .panel-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .panel-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 30px;
+            padding: 0;
+            border: none;
+        }
+        #timeline {
+            width: 100%;
+            height: 120px;
+            background: #222;
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        #timeline-content {
+            height: 100%;
+            min-width: 100%;
+            position: relative;
+        }
+        #playhead {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: red;
+            z-index: 10;
+        }
+        .track {
+            height: 30px;
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+        .keyframe {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #0078ff;
+            border-radius: 50%;
+            transform: translate(-4px, 11px);
+            cursor: pointer;
+        }
+        .keyframe.selected {
+            background: #ffcc00;
+            width: 10px;
+            height: 10px;
+            transform: translate(-5px, 10px);
+        }
+        .curve-editor {
+            height: 80px;
+            background: #1a1a1a;
+            margin-top: 5px;
+            position: relative;
+        }
+        #audio-upload {
+            display: none;
+        }
+        .tab {
+            padding: 5px 10px;
+            background: #333;
+            cursor: pointer;
+            display: inline-block;
+            margin-right: 5px;
+            border-radius: 3px 3px 0 0;
+        }
+        .tab.active {
+            background: #0078ff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #time-display {
+            font-family: monospace;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        #status-bar {
+            position: absolute;
+            bottom: 210px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="editor-ui">
+            <div id="toolbar">
+                <button id="add-laser-btn">添加激光组</button>
+                <button id="import-btn">导入配置</button>
+                <button id="export-btn">导出配置</button>
+                <button id="upload-btn">上传音乐</button>
+                <input type="file" id="audio-upload" accept="audio/*">
+                <button id="play-btn">播放</button>
+                <button id="stop-btn">停止</button>
+                <button id="record-btn">录制关键帧</button>
+                <span id="time-display">00:00 / 00:00</span>
+            </div>
+
+            <div id="parameter-panel">
+                <div class="tabs">
+                    <div class="tab active" data-tab="laser">激光参数</div>
+                    <div class="tab" data-tab="animation">动画</div>
+                    <div class="tab" data-tab="scene">场景</div>
+                </div>
+
+                <div class="tab-content active" id="laser-tab">
+                    <div class="panel-section">
+                        <h3>基本参数</h3>
+                        <label for="laser-color">颜色</label>
+                        <input type="color" id="laser-color" value="#ff0000">
+                        
+                        <label for="laser-intensity">强度</label>
+                        <input type="range" id="laser-intensity" min="0" max="10" step="0.1" value="5">
+                        
+                        <label for="laser-thickness">粗细</label>
+                        <input type="range" id="laser-thickness" min="0.01" max="0.5" step="0.01" value="0.1">
+                        
+                        <label for="laser-opacity">透明度</label>
+                        <input type="range" id="laser-opacity" min="0.1" max="1" step="0.05" value="0.8">
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3>光束控制</h3>
+                        <label for="beam-count">光束数量</label>
+                        <input type="number" id="beam-count" min="1" max="8" value="4">
+                        
+                        <label for="beam-spread">扩散角度</label>
+                        <input type="range" id="beam-spread" min="0" max="180" step="1" value="45">
+                    </div>
+                </div>
+
+                <div class="tab-content" id="animation-tab">
+                    <div class="panel-section">
+                        <h3>过渡效果</h3>
+                        <label for="transition-speed">过渡速度</label>
+                        <input type="range" id="transition-speed" min="0.1" max="5" step="0.1" value="1">
+                        
+                        <label for="blink-speed">闪烁速度</label>
+                        <input type="range" id="blink-speed" min="0" max="5" step="0.1" value="0">
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3>组序列</h3>
+                        <label for="group-sequence">激活顺序</label>
+                        <select id="group-sequence">
+                            <option value="all">全部同时</option>
+                            <option value="sequence">顺序激活</option>
+                            <option value="alternate">交替激活</option>
+                            <option value="random">随机激活</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="scene-tab">
+                    <div class="panel-section">
+                        <h3>环境设置</h3>
+                        <label for="fog-density">雾效密度</label>
+                        <input type="range" id="fog-density" min="0" max="0.1" step="0.001" value="0.03">
+                        
+                        <label for="ambient-light">环境光</label>
+                        <input type="range" id="ambient-light" min="0" max="1" step="0.05" value="0.3">
+                    </div>
+                </div>
+            </div>
+
+            <div id="timeline-container">
+                <div id="timeline">
+                    <div id="timeline-content" style="width: 6000px;">
+                        <div id="playhead"></div>
+                        <div class="track" id="position-track"></div>
+                        <div class="track" id="color-track"></div>
+                        <div class="track" id="intensity-track"></div>
+                    </div>
+                </div>
+                <div class="curve-editor" id="curve-editor"></div>
+            </div>
+
+            <div id="status-bar">就绪</div>
+        </div>
+    </div>
+
+    <script src="./js/three.min.js"></script>
+    <script src="./js/OrbitControls.js"></script>
+    <script src="./js/dat.gui.min.js"></script>
+    <script>
+        // 初始化Three.js场景
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // 轨道控制器
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 15, 30);
+        controls.update();
+
+        // 场景设置
+        scene.fog = new THREE.FogExp2(0x000000, 0.03);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        // 舞台灯光
+        const stageLight = new THREE.SpotLight(0xffffff, 0.5, 50, Math.PI/4, 0.5, 1);
+        stageLight.position.set(0, 20, 0);
+        stageLight.castShadow = true;
+        scene.add(stageLight);
+
+        // 创建舞台
+        function createStage() {
+            // 地面
+            const floorGeometry = new THREE.PlaneGeometry(50, 30);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x222222,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            
+            // 背景墙
+            const wallGeometry = new THREE.PlaneGeometry(50, 20);
+            const wallMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x111111,
+                side: THREE.DoubleSide
+            });
+            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+            wall.position.set(0, 10, -15);
+            wall.receiveShadow = true;
+            scene.add(wall);
+            
+            // 网格辅助
+            const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+            scene.add(gridHelper);
+            
+            // 坐标轴辅助
+            const axesHelper = new THREE.AxesHelper(10);
+            scene.add(axesHelper);
+        }
+        
+        createStage();
+
+        // 音频系统
+        let audioContext, analyser, dataArray, audioSource;
+        let isPlaying = false;
+        let isRecording = false;
+        let audioElement = new Audio();
+        let currentTime = 0;
+        let duration = 0;
+
+        // 激光组管理
+        let laserGroups = [];
+        let selectedLaserGroup = null;
+        let selectedKeyframe = null;
+
+        // 创建激光组
+        function createLaserGroup() {
+            const group = new THREE.Group();
+            
+            // 激光底座
+            const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 32);
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = 0.25;
+            base.castShadow = true;
+            group.add(base);
+            
+            // 激光头部
+            const headGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 0.8;
+            head.castShadow = true;
+            group.add(head);
+            
+            // 随机位置
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 5 + Math.random() * 10;
+            group.position.set(
+                Math.cos(angle) * radius,
+                0,
+                Math.sin(angle) * radius * 0.6
+            );
+            
+            // 创建光束
+            const beams = [];
+            const beamCount = parseInt(document.getElementById('beam-count').value);
+            const spread = parseInt(document.getElementById('beam-spread').value) * (Math.PI / 180);
+            
+            for (let i = 0; i < beamCount; i++) {
+                const beamAngle = (i / beamCount) * Math.PI * 2;
+                const beam = createLaserBeam({
+                    color: document.getElementById('laser-color').value,
+                    intensity: parseFloat(document.getElementById('laser-intensity').value),
+                    thickness: parseFloat(document.getElementById('laser-thickness').value),
+                    opacity: parseFloat(document.getElementById('laser-opacity').value),
+                    angle: beamAngle,
+                    spread: spread
+                });
+                beams.push(beam);
+                group.add(beam.mesh);
+                scene.add(beam.glow);
+                scene.add(beam.targetHelper);
+            }
+            
+            // 添加到场景
+            scene.add(group);
+            
+            // 创建组数据对象
+            const groupData = {
+                id: Date.now(),
+                group: group,
+                head: head,
+                beams: beams,
+                base: base,
+                keyframes: {
+                    position: [],
+                    color: [],
+                    intensity: []
+                },
+                currentParams: {
+                    position: group.position.clone(),
+                    color: document.getElementById('laser-color').value,
+                    intensity: parseFloat(document.getElementById('laser-intensity').value),
+                    spread: spread
+                }
+            };
+            
+            laserGroups.push(groupData);
+            selectLaserGroup(groupData);
+            
+            return groupData;
+        }
+
+        // 创建单束激光
+        function createLaserBeam(params) {
+            // 激光光束
+            const geometry = new THREE.CylinderGeometry(
+                params.thickness, 
+                params.thickness * 0.9, 
+                20, 
+                8
+            );
+            const material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(params.color),
+                transparent: true,
+                opacity: params.opacity
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = Math.PI / 2;
+            mesh.position.y = 0.8;
+            mesh.visible = false;
+            
+            // 光晕效果
+            const glowGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(params.color),
+                transparent: true,
+                opacity: params.opacity * 0.7
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.set(0, 0.8, -10);
+            glow.visible = false;
+            
+            // 目标点辅助对象
+            const targetHelper = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2),
+                new THREE.MeshBasicMaterial({ color: 0xffff00 })
+            );
+            targetHelper.visible = false;
+            
+            // 计算初始目标位置
+            const targetPosition = new THREE.Vector3(
+                Math.sin(params.angle) * Math.sin(params.spread) * 10,
+                0.5 + Math.cos(params.spread) * 5,
+                -10 + Math.cos(params.angle) * Math.sin(params.spread) * 5
+            );
+            
+            targetHelper.position.copy(targetPosition);
+            
+            return {
+                mesh: mesh,
+                glow: glow,
+                targetHelper: targetHelper,
+                params: params,
+                targetPosition: targetPosition.clone()
+            };
+        }
+
+        // 更新激光组参数
+        function updateLaserGroup(group) {
+            const color = document.getElementById('laser-color').value;
+            const intensity = parseFloat(document.getElementById('laser-intensity').value);
+            const thickness = parseFloat(document.getElementById('laser-thickness').value);
+            const opacity = parseFloat(document.getElementById('laser-opacity').value);
+            const beamCount = parseInt(document.getElementById('beam-count').value);
+            const spread = parseInt(document.getElementById('beam-spread').value) * (Math.PI / 180);
+            
+            // 更新现有光束
+            group.beams.forEach(beam => {
+                beam.mesh.material.color.setStyle(color);
+                beam.mesh.material.opacity = opacity;
+                beam.glow.material.color.setStyle(color);
+                beam.glow.material.opacity = opacity * 0.7;
+                
+                // 更新几何体以改变粗细
+                beam.mesh.geometry.dispose();
+                beam.mesh.geometry = new THREE.CylinderGeometry(
+                    thickness, 
+                    thickness * 0.9, 
+                    20, 
+                    8
+                );
+                
+                beam.params = {
+                    ...beam.params,
+                    color: color,
+                    intensity: intensity,
+                    thickness: thickness,
+                    opacity: opacity,
+                    spread: spread
+                };
+            });
+            
+            // 添加或移除光束
+            if (beamCount > group.beams.length) {
+                // 添加新光束
+                for (let i = group.beams.length; i < beamCount; i++) {
+                    const beamAngle = (i / beamCount) * Math.PI * 2;
+                    const beam = createLaserBeam({
+                        color: color,
+                        intensity: intensity,
+                        thickness: thickness,
+                        opacity: opacity,
+                        angle: beamAngle,
+                        spread: spread
+                    });
+                    group.beams.push(beam);
+                    group.group.add(beam.mesh);
+                    scene.add(beam.glow);
+                    scene.add(beam.targetHelper);
+                }
+            } else if (beamCount < group.beams.length) {
+                // 移除多余光束
+                for (let i = group.beams.length - 1; i >= beamCount; i--) {
+                    const beam = group.beams[i];
+                    group.group.remove(beam.mesh);
+                    scene.remove(beam.glow);
+                    scene.remove(beam.targetHelper);
+                    group.beams.splice(i, 1);
+                }
+            }
+            
+            // 更新当前参数
+            group.currentParams = {
+                ...group.currentParams,
+                color: color,
+                intensity: intensity,
+                spread: spread
+            };
+            
+            updateTimeline();
+        }
+
+        // 选择激光组
+        function selectLaserGroup(group) {
+            // 取消之前的选择
+            if (selectedLaserGroup) {
+                selectedLaserGroup.beams.forEach(beam => {
+                    beam.targetHelper.visible = false;
+                });
+                selectedLaserGroup.base.material.color.setHex(0x444444);
+            }
+            
+            // 设置新的选择
+            selectedLaserGroup = group;
+            if (group) {
+                group.beams.forEach(beam => {
+                    beam.targetHelper.visible = true;
+                });
+                group.base.material.color.setHex(0x0078ff);
+            }
+            
+            updateTimeline();
+        }
+
+        // 添加关键帧
+        function addKeyframe(type, time, value) {
+            if (!selectedLaserGroup) return;
+            
+            const keyframes = selectedLaserGroup.keyframes[type];
+            
+            // 查找插入位置
+            let insertIndex = keyframes.length;
+            for (let i = 0; i < keyframes.length; i++) {
+                if (keyframes[i].time > time) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+            
+            // 添加关键帧
+            keyframes.splice(insertIndex, 0, { time, value });
+            
+            updateTimeline();
+        }
+
+        // 删除关键帧
+        function deleteKeyframe(keyframe) {
+            if (!selectedLaserGroup) return;
+            
+            for (const type in selectedLaserGroup.keyframes) {
+                selectedLaserGroup.keyframes[type] = selectedLaserGroup.keyframes[type].filter(
+                    kf => kf !== keyframe
+                );
+            }
+            
+            selectedKeyframe = null;
+            updateTimeline();
+        }
+
+        // 更新时间轴显示
+        function updateTimeline() {
+            const positionTrack = document.getElementById('position-track');
+            const colorTrack = document.getElementById('color-track');
+            const intensityTrack = document.getElementById('intensity-track');
+            
+            // 清空现有关键帧
+            positionTrack.innerHTML = '';
+            colorTrack.innerHTML = '';
+            intensityTrack.innerHTML = '';
+            
+            if (!selectedLaserGroup) return;
+            
+            // 添加位置关键帧
+            selectedLaserGroup.keyframes.position.forEach(kf => {
+                const keyframe = document.createElement('div');
+                keyframe.className = 'keyframe';
+                keyframe.style.left = `${(kf.time / duration) * 100}%`;
+                keyframe.dataset.time = kf.time;
+                keyframe.dataset.type = 'position';
+                keyframe.addEventListener('click', () => selectKeyframe(kf));
+                positionTrack.appendChild(keyframe);
+            });
+            
+            // 添加颜色关键帧
+            selectedLaserGroup.keyframes.color.forEach(kf => {
+                const keyframe = document.createElement('div');
+                keyframe.className = 'keyframe';
+                keyframe.style.left = `${(kf.time / duration) * 100}%`;
+                keyframe.dataset.time = kf.time;
+                keyframe.dataset.type = 'color';
+                keyframe.addEventListener('click', () => selectKeyframe(kf));
+                colorTrack.appendChild(keyframe);
+            });
+            
+            // 添加强度关键帧
+            selectedLaserGroup.keyframes.intensity.forEach(kf => {
+                const keyframe = document.createElement('div');
+                keyframe.className = 'keyframe';
+                keyframe.style.left = `${(kf.time / duration) * 100}%`;
+                keyframe.dataset.time = kf.time;
+                keyframe.dataset.type = 'intensity';
+                keyframe.addEventListener('click', () => selectKeyframe(kf));
+                intensityTrack.appendChild(keyframe);
+            });
+        }
+
+        // 选择关键帧
+        function selectKeyframe(keyframe) {
+            if (selectedKeyframe) {
+                document.querySelectorAll('.keyframe').forEach(el => {
+                    el.classList.remove('selected');
+                });
+            }
+            
+            selectedKeyframe = keyframe;
+            
+            if (keyframe) {
+                document.querySelectorAll(`.keyframe[data-time="${keyframe.time}"][data-type="${keyframe.type}"]`).forEach(el => {
+                    el.classList.add('selected');
+                });
+                
+                // 更新UI参数
+                switch(keyframe.type) {
+                    case 'position':
+                        // 位置关键帧不需要更新UI
+                        break;
+                    case 'color':
+                        document.getElementById('laser-color').value = keyframe.value;
+                        break;
+                    case 'intensity':
+                        document.getElementById('laser-intensity').value = keyframe.value;
+                        break;
+                }
+            }
+        }
+
+        // 更新激光动画
+        function updateLasers(time) {
+            laserGroups.forEach(group => {
+                // 插值计算当前参数
+                const params = interpolateParameters(group, time);
+                
+                // 更新组位置
+                group.group.position.copy(params.position);
+                
+                // 更新光束
+                group.beams.forEach((beam, i) => {
+                    const beamAngle = (i / group.beams.length) * Math.PI * 2;
+                    
+                    // 计算目标位置
+                    const targetPosition = new THREE.Vector3(
+                        Math.sin(beamAngle) * Math.sin(params.spread) * 10,
+                        0.5 + Math.cos(params.spread) * 5,
+                        -10 + Math.cos(beamAngle) * Math.sin(params.spread) * 5
+                    );
+                    
+                    // 应用组位置偏移
+                    targetPosition.add(group.group.position);
+                    targetPosition.y += 0.3; // 稍微抬高一点
+                    
+                    // 保存目标位置
+                    beam.targetPosition.copy(targetPosition);
+                    beam.targetHelper.position.copy(targetPosition);
+                    
+                    // 更新激光束方向和长度
+                    const beamPosition = new THREE.Vector3(
+                        group.group.position.x,
+                        group.group.position.y + 0.8,
+                        group.group.position.z
+                    );
+                    
+                    beam.mesh.lookAt(targetPosition);
+                    beam.mesh.scale.y = beamPosition.distanceTo(targetPosition) / 20;
+                    
+                    // 更新光晕位置
+                    beam.glow.position.copy(targetPosition);
+                    
+                    // 更新颜色和强度
+                    beam.mesh.material.color.setStyle(params.color);
+                    beam.glow.material.color.setStyle(params.color);
+                    
+                    const intensityFactor = params.intensity / 10;
+                    beam.mesh.material.opacity = beam.params.opacity * intensityFactor;
+                    beam.glow.material.opacity = beam.params.opacity * 0.7 * intensityFactor;
+                    
+                    // 显示/隐藏光束
+                    beam.mesh.visible = params.intensity > 0;
+                    beam.glow.visible = params.intensity > 0;
+                });
+            });
+        }
+
+        // 参数插值
+        function interpolateParameters(group, time) {
+            const result = {
+                position: group.group.position.clone(),
+                color: group.currentParams.color,
+                intensity: group.currentParams.intensity,
+                spread: group.currentParams.spread
+            };
+            
+            // 位置插值
+            if (group.keyframes.position.length > 0) {
+                let prev = group.keyframes.position[0];
+                let next = group.keyframes.position[group.keyframes.position.length - 1];
+                
+                for (let i = 0; i < group.keyframes.position.length; i++) {
+                    if (group.keyframes.position[i].time >= time) {
+                        next = group.keyframes.position[i];
+                        prev = i > 0 ? group.keyframes.position[i - 1] : next;
+                        break;
+                    }
+                }
+                
+                if (prev === next) {
+                    result.position.copy(prev.value);
+                } else {
+                    const t = (time - prev.time) / (next.time - prev.time);
+                    result.position.lerpVectors(prev.value, next.value, t);
+                }
+            }
+            
+            // 颜色插值
+            if (group.keyframes.color.length > 0) {
+                let prev = group.keyframes.color[0];
+                let next = group.keyframes.color[group.keyframes.color.length - 1];
+                
+                for (let i = 0; i < group.keyframes.color.length; i++) {
+                    if (group.keyframes.color[i].time >= time) {
+                        next = group.keyframes.color[i];
+                        prev = i > 0 ? group.keyframes.color[i - 1] : next;
+                        break;
+                    }
+                }
+                
+                if (prev === next) {
+                    result.color = prev.value;
+                } else {
+                    const t = (time - prev.time) / (next.time - prev.time);
+                    result.color = interpolateColor(prev.value, next.value, t);
+                }
+            }
+            
+            // 强度插值
+            if (group.keyframes.intensity.length > 0) {
+                let prev = group.keyframes.intensity[0];
+                let next = group.keyframes.intensity[group.keyframes.intensity.length - 1];
+                
+                for (let i = 0; i < group.keyframes.intensity.length; i++) {
+                    if (group.keyframes.intensity[i].time >= time) {
+                        next = group.keyframes.intensity[i];
+                        prev = i > 0 ? group.keyframes.intensity[i - 1] : next;
+                        break;
+                    }
+                }
+                
+                if (prev === next) {
+                    result.intensity = prev.value;
+                } else {
+                    const t = (time - prev.time) / (next.time - prev.time);
+                    result.intensity = prev.value + (next.value - prev.value) * t;
+                }
+            }
+            
+            return result;
+        }
+
+        // 颜色插值
+        function interpolateColor(color1, color2, t) {
+            const c1 = new THREE.Color(color1);
+            const c2 = new THREE.Color(color2);
+            const result = c1.clone();
+            result.lerp(c2, t);
+            return `#${result.getHexString()}`;
+        }
+
+        // 初始化音频
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            audioElement = new Audio();
+            const source = audioContext.createMediaElementSource(audioElement);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            audioElement.addEventListener('timeupdate', updateTimeDisplay);
+            audioElement.addEventListener('loadedmetadata', () => {
+                duration = audioElement.duration;
+                updateTimeDisplay();
+                updateTimeline();
+            });
+            audioElement.addEventListener('ended', () => {
+                isPlaying = false;
+                document.getElementById('play-btn').textContent = '播放';
+            });
+        }
+
+        // 更新时间显示
+        function updateTimeDisplay() {
+            currentTime = audioElement.currentTime || 0;
+            duration = audioElement.duration || 0;
+            
+            const currentStr = formatTime(currentTime);
+            const durationStr = formatTime(duration);
+            document.getElementById('time-display').textContent = `${currentStr} / ${durationStr}`;
+            
+            // 更新播放头位置
+            const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+            document.getElementById('playhead').style.left = `${progress}%`;
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // 导出配置
+        function exportConfig() {
+            const config = {
+                version: '1.0',
+                laserGroups: laserGroups.map(group => ({
+                    id: group.id,
+                    position: group.group.position.toArray(),
+                    beams: group.beams.map(beam => ({
+                        angle: beam.params.angle,
+                        targetPosition: beam.targetPosition.toArray()
+                    })),
+                    keyframes: {
+                        position: group.keyframes.position.map(kf => ({
+                            time: kf.time,
+                            value: kf.value.toArray()
+                        })),
+                        color: group.keyframes.color.map(kf => ({
+                            time: kf.time,
+                            value: kf.value
+                        })),
+                        intensity: group.keyframes.intensity.map(kf => ({
+                            time: kf.time,
+                            value: kf.value
+                        }))
+                    },
+                    currentParams: {
+                        color: group.currentParams.color,
+                        intensity: group.currentParams.intensity,
+                        spread: group.currentParams.spread
+                    }
+                })),
+                audioFile: audioElement.src.startsWith('blob:') ? null : audioElement.src,
+                duration: duration
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'laser-show-config.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入配置
+        function importConfig(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // 清除现有激光组
+                    laserGroups.forEach(group => {
+                        scene.remove(group.group);
+                        group.beams.forEach(beam => {
+                            scene.remove(beam.glow);
+                            scene.remove(beam.targetHelper);
+                        });
+                    });
+                    laserGroups = [];
+                    
+                    // 加载音频
+                    if (config.audioFile) {
+                        audioElement.src = config.audioFile;
+                        document.getElementById('play-btn').disabled = false;
+                    }
+                    
+                    duration = config.duration || 0;
+                    
+                    // 创建激光组
+                    config.laserGroups.forEach(groupConfig => {
+                        const group = new THREE.Group();
+                        group.position.fromArray(groupConfig.position);
+                        
+                        // 激光底座
+                        const baseGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 32);
+                        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+                        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                        base.position.y = 0.25;
+                        base.castShadow = true;
+                        group.add(base);
+                        
+                        // 激光头部
+                        const headGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+                        const headMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                        const head = new THREE.Mesh(headGeometry, headMaterial);
+                        head.position.y = 0.8;
+                        head.castShadow = true;
+                        group.add(head);
+                        
+                        // 创建光束
+                        const beams = [];
+                        groupConfig.beams.forEach(beamConfig => {
+                            const beam = createLaserBeam({
+                                color: groupConfig.currentParams.color,
+                                intensity: groupConfig.currentParams.intensity,
+                                thickness: 0.1,
+                                opacity: 0.8,
+                                angle: beamConfig.angle,
+                                spread: groupConfig.currentParams.spread
+                            });
+                            beam.targetPosition.fromArray(beamConfig.targetPosition);
+                            beam.targetHelper.position.copy(beam.targetPosition);
+                            beams.push(beam);
+                            group.add(beam.mesh);
+                            scene.add(beam.glow);
+                            scene.add(beam.targetHelper);
+                        });
+                        
+                        // 添加到场景
+                        scene.add(group);
+                        
+                        // 转换关键帧数据
+                        const keyframes = {
+                            position: groupConfig.keyframes.position.map(kf => ({
+                                time: kf.time,
+                                value: new THREE.Vector3().fromArray(kf.value)
+                            })),
+                            color: groupConfig.keyframes.color.map(kf => ({
+                                time: kf.time,
+                                value: kf.value
+                            })),
+                            intensity: groupConfig.keyframes.intensity.map(kf => ({
+                                time: kf.time,
+                                value: kf.value
+                            }))
+                        };
+                        
+                        // 创建组数据对象
+                        const groupData = {
+                            id: groupConfig.id,
+                            group: group,
+                            head: head,
+                            beams: beams,
+                            base: base,
+                            keyframes: keyframes,
+                            currentParams: groupConfig.currentParams
+                        };
+                        
+                        laserGroups.push(groupData);
+                    });
+                    
+                    if (laserGroups.length > 0) {
+                        selectLaserGroup(laserGroups[0]);
+                    }
+                    
+                    updateStatus('配置导入成功');
+                } catch (error) {
+                    console.error('导入配置失败:', error);
+                    updateStatus('导入配置失败: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 更新状态栏
+        function updateStatus(message) {
+            document.getElementById('status-bar').textContent = message;
+            setTimeout(() => {
+                if (document.getElementById('status-bar').textContent === message) {
+                    document.getElementById('status-bar').textContent = '就绪';
+                }
+            }, 3000);
+        }
+
+        // 鼠标交互
+        let isDragging = false;
+        let dragTarget = null;
+        
+        function onMouseDown(event) {
+            if (event.button !== 0) return; // 只处理左键
+            
+            // 检查是否点击了激光目标点
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(
+                laserGroups.flatMap(group => 
+                    group.beams.map(beam => beam.targetHelper)
+                ), 
+                true
+            );
+            
+            if (intersects.length > 0) {
+                dragTarget = intersects[0].object;
+                isDragging = true;
+                
+                // 如果是录制模式，添加位置关键帧
+                if (isRecording && selectedLaserGroup) {
+                    const beam = laserGroups.flatMap(g => g.beams).find(
+                        b => b.targetHelper === dragTarget
+                    );
+                    
+                    if (beam) {
+                        addKeyframe('position', currentTime, beam.targetHelper.position.clone());
+                    }
+                }
+                
+                return;
+            }
+            
+            // 检查是否点击了激光组
+            const groupIntersects = raycaster.intersectObjects(
+                laserGroups.map(group => group.base),
+                true
+            );
+            
+            if (groupIntersects.length > 0) {
+                const group = laserGroups.find(
+                    g => g.base === groupIntersects[0].object
+                );
+                selectLaserGroup(group);
+            } else {
+                selectLaserGroup(null);
+            }
+        }
+        
+        function onMouseMove(event) {
+            if (!isDragging || !dragTarget) return;
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            // 计算与地面的交点
+            const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersection = new THREE.Vector3();
+            raycaster.ray.intersectPlane(groundPlane, intersection);
+            
+            if (intersection) {
+                dragTarget.position.copy(intersection);
+                
+                // 如果是录制模式，更新位置关键帧
+                if (isRecording && selectedLaserGroup) {
+                    const beam = laserGroups.flatMap(g => g.beams).find(
+                        b => b.targetHelper === dragTarget
+                    );
+                    
+                    if (beam) {
+                        const keyframes = selectedLaserGroup.keyframes.position;
+                        const lastKeyframe = keyframes[keyframes.length - 1];
+                        
+                        if (lastKeyframe && lastKeyframe.time === currentTime) {
+                            lastKeyframe.value.copy(intersection);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function onMouseUp() {
+            isDragging = false;
+            dragTarget = null;
+        }
+
+        // UI事件监听
+        document.getElementById('add-laser-btn').addEventListener('click', () => {
+            const group = createLaserGroup();
+            updateStatus(`添加激光组 ${laserGroups.length}`);
+        });
+        
+        document.getElementById('import-btn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => importConfig(e.target.files[0]);
+            input.click();
+        });
+        
+        document.getElementById('export-btn').addEventListener('click', exportConfig);
+        
+        document.getElementById('upload-btn').addEventListener('click', () => {
+            document.getElementById('audio-upload').click();
+        });
+        
+        document.getElementById('audio-upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                audioElement.src = url;
+                document.getElementById('play-btn').disabled = false;
+                updateStatus(`已加载音频: ${file.name}`);
+            }
+        });
+        
+        document.getElementById('play-btn').addEventListener('click', () => {
+            if (!audioContext) initAudio();
+            
+            if (isPlaying) {
+                audioElement.pause();
+                document.getElementById('play-btn').textContent = '播放';
+            } else {
+                audioElement.play();
+                document.getElementById('play-btn').textContent = '暂停';
+            }
+            isPlaying = !isPlaying;
+        });
+        
+        document.getElementById('stop-btn').addEventListener('click', () => {
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            isPlaying = false;
+            document.getElementById('play-btn').textContent = '播放';
+            updateTimeDisplay();
+        });
+        
+        document.getElementById('record-btn').addEventListener('click', function() {
+            isRecording = !isRecording;
+            this.classList.toggle('active');
+            updateStatus(isRecording ? '录制模式已开启' : '录制模式已关闭');
+        });
+        
+        // 参数变化监听
+        document.getElementById('laser-color').addEventListener('input', function() {
+            if (selectedLaserGroup) {
+                if (isRecording) {
+                    addKeyframe('color', currentTime, this.value);
+                } else {
+                    selectedLaserGroup.currentParams.color = this.value;
+                }
+            }
+        });
+        
+        document.getElementById('laser-intensity').addEventListener('input', function() {
+            if (selectedLaserGroup) {
+                const value = parseFloat(this.value);
+                if (isRecording) {
+                    addKeyframe('intensity', currentTime, value);
+                } else {
+                    selectedLaserGroup.currentParams.intensity = value;
+                }
+            }
+        });
+        
+        document.getElementById('beam-count').addEventListener('change', function() {
+            if (selectedLaserGroup) {
+                updateLaserGroup(selectedLaserGroup);
+            }
+        });
+        
+        document.getElementById('beam-spread').addEventListener('input', function() {
+            if (selectedLaserGroup) {
+                selectedLaserGroup.currentParams.spread = 
+                    parseInt(this.value) * (Math.PI / 180);
+            }
+        });
+        
+        // 标签切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+        
+        // 时间轴拖动
+        document.getElementById('timeline-container').addEventListener('input', function() {
+            const progress = parseInt(this.value);
+            currentTime = (progress / 100) * duration;
+            
+            if (audioElement.duration) {
+                audioElement.currentTime = currentTime;
+            }
+            
+            updateLasers(currentTime);
+            updateTimeDisplay();
+        });
+
+        // 窗口大小调整
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 鼠标事件
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+
+        // 动画循环
+        let lastTime = 0;
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            // 更新音频分析
+            if (analyser && isPlaying) {
+                analyser.getByteFrequencyData(dataArray);
+                currentTime = audioElement.currentTime;
+                updateLasers(currentTime);
+                updateTimeDisplay();
+            }
+            
+            // 更新场景参数
+            const fogDensity = parseFloat(document.getElementById('fog-density').value);
+            const ambientIntensity = parseFloat(document.getElementById('ambient-light').value);
+            
+            scene.fog = new THREE.FogExp2(0x000000, fogDensity);
+            ambientLight.intensity = ambientIntensity;
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 启动动画
+        animate();
+    </script>
+</body>
+</html>

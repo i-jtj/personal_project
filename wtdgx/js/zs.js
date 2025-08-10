@@ -116,17 +116,38 @@ class SweepingLaser {
     this.time = 0;
     this.sweepAngle = 0;
   }
-  
+  updateDir(options){
+    this.options = {
+      startPosition: new THREE.Vector3(0, 0, 0),
+      endPosition: new THREE.Vector3(0, 0, -10),
+      color: 0xff0000,
+      width: 0.3,
+      speed: 1.0,
+      brightness: 1.0,
+      sweepRange: Math.PI / 3,
+      sweepSpeed: 0.5,
+      ...options
+    };
+     const udirection = new THREE.Vector3().subVectors(
+      this.options.endPosition, 
+      this.options.startPosition
+    ).normalize();
+     this.beam.lookAt(udirection);
+  // 更新材质
+    this.material.uniforms.uTime.value = this.time;
+    this.material.uniforms.uBrightness.value = this.options.brightness;
+    this.material.uniforms.uSpeed.value = this.options.speed;
+  }
   update(delta) {
     this.time += delta;
     this.sweepAngle += delta * this.options.sweepSpeed;
     
     const currentAngle = Math.sin(this.sweepAngle) * this.options.sweepRange;
     const direction = this.direction.clone()
-      .applyAxisAngle(new THREE.Vector3(10, 10, -10), currentAngle);
+      .applyAxisAngle(new THREE.Vector3(10, 10, -10), 0);
     
     // 更新光束方向
-    this.beam.lookAt(direction);
+    // this.beam.lookAt(direction);
     
     // 更新材质
     this.material.uniforms.uTime.value = this.time;
@@ -157,23 +178,24 @@ const laserSystem = {
 // 5. 创建两条独立扫动的激光
 const laser1 = laserSystem.addLaser({
   startPosition: new THREE.Vector3(10, 0, 0),
-  endPosition: new THREE.Vector3(20, 10, -10),
+  endPosition: new THREE.Vector3(-11, 10, 12),
   color: 0xff5555,
   width: 2,
-  brightness: 1.5,
-  sweepRange:2,
-  sweepSpeed: 0.3
+  brightness: 2,
+  sweepRange:1,
+  sweepSpeed: 0
 });
 
 const laser2 = laserSystem.addLaser({
   startPosition: new THREE.Vector3(10, 0, 0),
-  endPosition: new THREE.Vector3(10, 10, -50),
+  endPosition: new THREE.Vector3(7,-50, 10),
   color: 0x55aaff,
-  width: 2,
-  brightness: 1.5,
-  sweepRange:2,
-  sweepSpeed: 0.4
+  width: 1.5,
+  brightness: 2,
+  sweepRange:0,
+  sweepSpeed:0
 });
+
 
 // 6. 添加坐标辅助和地面网格
 const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
@@ -190,6 +212,19 @@ function animate() {
 }
 
 animate();
+
+setTimeout(()=>{
+  let laserArr=laserSystem.lasers
+  let laser1=laserArr[1]
+  let l1options=laser1['options']
+
+  let  startPosition= new THREE.Vector3(10, 0, 0)
+  let endPosition = new THREE.Vector3(5,-50, 2)
+  l1options['startPosition']=startPosition
+  l1options['endPosition']=endPosition
+  laser1.updateDir(l1options)
+console.log("尝试在控制台操作激光:",l1options);
+},2000)
 
 // 8. 窗口大小调整
 window.addEventListener('resize', () => {
