@@ -116,28 +116,33 @@ class SweepingLaser {
     this.time = 0;
     this.sweepAngle = 0;
   }
-  updateDir(options){
-    this.options = {
-      startPosition: new THREE.Vector3(0, 0, 0),
-      endPosition: new THREE.Vector3(0, 0, -10),
-      color: 0xff0000,
-      width: 0.3,
-      speed: 1.0,
-      brightness: 1.0,
-      sweepRange: Math.PI / 3,
-      sweepSpeed: 0.5,
-      ...options
-    };
-     const udirection = new THREE.Vector3().subVectors(
-      this.options.endPosition, 
-      this.options.startPosition
-    ).normalize();
-     this.beam.lookAt(udirection);
-  // 更新材质
-    this.material.uniforms.uTime.value = this.time;
-    this.material.uniforms.uBrightness.value = this.options.brightness;
-    this.material.uniforms.uSpeed.value = this.options.speed;
-  }
+ updateDir(options) {
+  // 合并参数
+  this.options = {
+    startPosition: new THREE.Vector3(0, 0, 0),
+    endPosition: new THREE.Vector3(0, 0, -10),
+    // ...其他默认参数
+    ...options
+  };
+
+  // 计算并存储方向向量
+  this.direction = new THREE.Vector3().subVectors(
+    this.options.endPosition, 
+    this.options.startPosition
+  ).normalize();
+  
+  // 正确设置光束朝向和位置
+  // this.beam.position.copy(this.options.startPosition);
+  this.beam.lookAt(this.options.endPosition);
+  
+  // 调整光束长度
+  // const length = this.options.startPosition.distanceTo(this.options.endPosition);
+  // this.beam.scale.z = length;
+  
+  // 更新材质参数
+  this.material.uniforms.uBrightness.value = this.options.brightness;
+  this.material.uniforms.uSpeed.value = this.options.speed;
+}
   update(delta) {
     this.time += delta;
     this.sweepAngle += delta * this.options.sweepSpeed;
@@ -188,7 +193,7 @@ const laser1 = laserSystem.addLaser({
 
 const laser2 = laserSystem.addLaser({
   startPosition: new THREE.Vector3(10, 0, 0),
-  endPosition: new THREE.Vector3(7,-50, 10),
+  endPosition: new THREE.Vector3(7,-10, 10),
   color: 0x55aaff,
   width: 1.5,
   brightness: 2,
@@ -204,6 +209,32 @@ scene.add(gridHelper);
 const axesHelper = new THREE.AxesHelper(10);
 scene.add(axesHelper);
 
+
+function animation(duration,from,to,fn){
+  const dis = to - from;
+  const speed  = dis / duration;
+  const startTime = Date.now();
+  let value = from;
+  fn(value);
+  function _run(){
+    const now = Date.now();
+    const time = now  - startTime;
+    if(time > duration){
+      value = to;
+      fn(value);
+      return;
+    }
+    const d = time * speed;
+    value = from + d;
+    fn(value);
+
+    requestAnimationFrame(_run);
+
+  }
+
+  requestAnimationFrame(_run);
+}
+
 // 7. 动画循环
 function animate() {
   requestAnimationFrame(animate);
@@ -213,18 +244,19 @@ function animate() {
 
 animate();
 
-setTimeout(()=>{
-  let laserArr=laserSystem.lasers
-  let laser1=laserArr[1]
-  let l1options=laser1['options']
+// setTimeout(()=>{
+//   let laserArr=laserSystem.lasers
+//   let laser2=laserArr[1]
+//   let l2options=laser2['options']
 
-  let  startPosition= new THREE.Vector3(10, 0, 0)
-  let endPosition = new THREE.Vector3(5,-50, 2)
-  l1options['startPosition']=startPosition
-  l1options['endPosition']=endPosition
-  laser1.updateDir(l1options)
-console.log("尝试在控制台操作激光:",l1options);
-},2000)
+//   let  startPosition= new THREE.Vector3(10, 0, 0)
+//   let endPosition = new THREE.Vector3(10,-10, 2)
+//   l2options['startPosition']=startPosition
+//   l2options['endPosition']=endPosition
+//   laser2.updateDir(l2options)
+  
+// console.log("尝试在控制台操作激光:",l2options);
+// },2000)
 
 // 8. 窗口大小调整
 window.addEventListener('resize', () => {
@@ -233,7 +265,38 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 控制台测试命令
-console.log("尝试在控制台操作激光:");
-console.log("laser1.options.brightness = 2.0; // 增加激光1亮度");
-console.log("laser2.options.sweepSpeed = 0.8; // 加快激光2扫动速度");
+  /**
+   * startPosition: new THREE.Vector3(10, 0, 0),
+    endPosition: new THREE.Vector3(7,-10, 10),
+   */
+  let laserArr=laserSystem.lasers
+  let laserItem2=laserArr[1]
+  let l2options=laserItem2['options']
+
+  let  startPosition= new THREE.Vector3(10, 0, 0)
+  l2options['startPosition']=startPosition
+  let x=10,y=-10,z=10;
+animation(1000,10,9,(val)=>{
+  x=val
+  let endPosition = new THREE.Vector3(x,y,z)
+  l2options['endPosition']=endPosition
+  laserItem2.updateDir(l2options)
+console.log("尝试在控制台操作激光:x==="+x);
+})
+
+animation(1000,-10,-20,(val)=>{
+  y=val
+  let endPosition = new THREE.Vector3(x,y, z)
+  l2options['endPosition']=endPosition
+  laserItem2.updateDir(l2options)
+console.log("尝试在控制台操作激光:y==="+y);
+})
+
+animation(1000,10,5,(val)=>{
+  z=val
+  let endPosition = new THREE.Vector3(x,y, z)
+  l2options['endPosition']=endPosition
+  laserItem2.updateDir(l2options)
+console.log("尝试在控制台操作激光:z==="+z);
+})
+
