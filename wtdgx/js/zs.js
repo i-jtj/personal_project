@@ -1,4 +1,4 @@
-
+import {laserGroupArr} from './datas.js'
 
 // 1. 初始化场景
 const scene = new THREE.Scene();
@@ -181,26 +181,71 @@ const laserSystem = {
 };
 
 // 5. 创建两条独立扫动的激光
-const laser1 = laserSystem.addLaser({
-  startPosition: new THREE.Vector3(10, 0, 0),
-  endPosition: new THREE.Vector3(-11, 10, 12),
-  color: 0xff5555,
-  width: 2,
-  brightness: 2,
-  sweepRange:1,
-  sweepSpeed: 0
-});
+// const laser1 = laserSystem.addLaser({
+//   startPosition: new THREE.Vector3(10, 0, 0),
+//   endPosition: new THREE.Vector3(-11, 10, 12),
+//   color: 0xff5555,
+//   width: 2,
+//   brightness: 2,
+//   sweepRange:1,
+//   sweepSpeed: 0
+// });
 
-const laser2 = laserSystem.addLaser({
-  startPosition: new THREE.Vector3(10, 0, 0),
-  endPosition: new THREE.Vector3(7,-10, 10),
-  color: 0x55aaff,
-  width: 1.5,
-  brightness: 2,
-  sweepRange:0,
-  sweepSpeed:0
-});
+// const laser2 = laserSystem.addLaser({
+//   startPosition: new THREE.Vector3(10, 0, 0),
+//   endPosition: new THREE.Vector3(7,-10, 10),
+//   color: 0x55aaff,
+//   width: 1.5,
+//   brightness: 2,
+//   sweepRange:0,
+//   sweepSpeed:0
+// });
 
+  function isNEArr(data){
+    return Array.isArray(data) && data.length
+  }
+
+  function isObj(data){
+    return Object.prototype.toString.call(data) === '[object Object]'
+  }
+
+
+function isNumber(value) {
+  return typeof value === 'number' && !isNaN(value);
+}
+
+function addLaserGroup(laserArr=[]) {
+  if(!isNEArr(laserArr)) return;
+    const laserOption={
+      startPosition: new THREE.Vector3(0, 0, 0),
+      endPosition: new THREE.Vector3(7,-10, 10),
+      color: 0x55aaff,
+      width: 1.5,
+      brightness: 2,
+      sweepRange:0,
+      sweepSpeed:0
+    }
+
+  for(let item of laserArr){
+    if(isObj(item)){
+      for(let key in laserOption){
+        if(laserOption.hasOwnProperty(key)){
+          let isp = (key=='startPosition' || key==='endPosition') && isNumber(item[key].x) && isNumber(item[key].y) && isNumber(item[key].z)
+          if(isp){
+            laserOption[key] = new THREE.Vector3(item[key].x,item[key].y,item[key].z)
+          }else{
+            laserOption[key] = item[key];
+
+          }
+          // console.log('laserOption1',laserOption)
+        }
+      }
+       laserSystem.addLaser(laserOption)
+    }
+  }
+          // console.log('laserOption',laserArr)
+
+}
 
 // 6. 添加坐标辅助和地面网格
 const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
@@ -244,19 +289,8 @@ function animate() {
 
 animate();
 
-// setTimeout(()=>{
-//   let laserArr=laserSystem.lasers
-//   let laser2=laserArr[1]
-//   let l2options=laser2['options']
+addLaserGroup(laserGroupArr)
 
-//   let  startPosition= new THREE.Vector3(10, 0, 0)
-//   let endPosition = new THREE.Vector3(10,-10, 2)
-//   l2options['startPosition']=startPosition
-//   l2options['endPosition']=endPosition
-//   laser2.updateDir(l2options)
-  
-// console.log("尝试在控制台操作激光:",l2options);
-// },2000)
 
 // 8. 窗口大小调整
 window.addEventListener('resize', () => {
@@ -269,34 +303,35 @@ window.addEventListener('resize', () => {
    * startPosition: new THREE.Vector3(10, 0, 0),
     endPosition: new THREE.Vector3(7,-10, 10),
    */
-  let laserArr=laserSystem.lasers
-  let laserItem2=laserArr[1]
-  let l2options=laserItem2['options']
 
-  let  startPosition= new THREE.Vector3(10, 0, 0)
-  l2options['startPosition']=startPosition
-  let x=10,y=-10,z=10;
-animation(1000,10,9,(val)=>{
-  x=val
-  let endPosition = new THREE.Vector3(x,y,z)
-  l2options['endPosition']=endPosition
-  laserItem2.updateDir(l2options)
-console.log("尝试在控制台操作激光:x==="+x);
-})
+//   let laserArr=laserSystem.lasers
+//   let laserItem2=laserArr[1]
+//   let l2options=laserItem2['options']
 
-animation(1000,-10,-20,(val)=>{
-  y=val
-  let endPosition = new THREE.Vector3(x,y, z)
-  l2options['endPosition']=endPosition
-  laserItem2.updateDir(l2options)
-console.log("尝试在控制台操作激光:y==="+y);
-})
+//   let  startPosition= new THREE.Vector3(10, 0, 0)
+//   l2options['startPosition']=startPosition
+//   let x=10,y=-10,z=10;
+// animation(1000,10,9,(val)=>{
+//   x=val
+//   let endPosition = new THREE.Vector3(x,y,z)
+//   l2options['endPosition']=endPosition
+//   laserItem2.updateDir(l2options)
+// // console.log("尝试在控制台操作激光:x==="+x);
+// })
 
-animation(1000,10,5,(val)=>{
-  z=val
-  let endPosition = new THREE.Vector3(x,y, z)
-  l2options['endPosition']=endPosition
-  laserItem2.updateDir(l2options)
-console.log("尝试在控制台操作激光:z==="+z);
-})
+// animation(1000,-10,-20,(val)=>{
+//   y=val
+//   let endPosition = new THREE.Vector3(x,y, z)
+//   l2options['endPosition']=endPosition
+//   laserItem2.updateDir(l2options)
+// // console.log("尝试在控制台操作激光:y==="+y);
+// })
+
+// animation(1000,10,5,(val)=>{
+//   z=val
+//   let endPosition = new THREE.Vector3(x,y, z)
+//   l2options['endPosition']=endPosition
+//   laserItem2.updateDir(l2options)
+// // console.log("尝试在控制台操作激光:z==="+z);
+// })
 
