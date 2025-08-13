@@ -1,4 +1,5 @@
 import {laserGroupArr} from './datas.js'
+import {createSyncLaserSystem} from './transform.js'
 
 // 1. 初始化场景
 const scene = new THREE.Scene();
@@ -116,33 +117,33 @@ class SweepingLaser {
     this.time = 0;
     this.sweepAngle = 0;
   }
- updateDir(options) {
-  // 合并参数
-  this.options = {
-    startPosition: new THREE.Vector3(0, 0, 0),
-    endPosition: new THREE.Vector3(0, 0, -10),
-    // ...其他默认参数
-    ...options
-  };
 
-  // 计算并存储方向向量
-  this.direction = new THREE.Vector3().subVectors(
-    this.options.endPosition, 
-    this.options.startPosition
-  ).normalize();
-  
-  // 正确设置光束朝向和位置
-  // this.beam.position.copy(this.options.startPosition);
-  this.beam.lookAt(this.options.endPosition);
-  
-  // 调整光束长度
-  // const length = this.options.startPosition.distanceTo(this.options.endPosition);
-  // this.beam.scale.z = length;
-  
-  // 更新材质参数
-  this.material.uniforms.uBrightness.value = this.options.brightness;
-  this.material.uniforms.uSpeed.value = this.options.speed;
-}
+  updateDir(options) {
+      // 合并参数
+      this.options = {
+        startPosition: new THREE.Vector3(0, 0, 0),
+        endPosition: new THREE.Vector3(0, 0, -10),
+        // ...其他默认参数
+        ...options
+      };
+      // 计算并存储方向向量
+      this.direction = new THREE.Vector3().subVectors(
+        this.options.endPosition, 
+        this.options.startPosition
+      ).normalize();
+      
+      // 正确设置光束朝向和位置
+      // this.beam.position.copy(this.options.startPosition);
+      this.beam.lookAt(this.options.endPosition);
+      
+      // 调整光束长度
+      // const length = this.options.startPosition.distanceTo(this.options.endPosition);
+      // this.beam.scale.z = length;
+      
+      // 更新材质参数
+      this.material.uniforms.uBrightness.value = this.options.brightness;
+      this.material.uniforms.uSpeed.value = this.options.speed;
+    }
   update(delta) {
     this.time += delta;
     this.sweepAngle += delta * this.options.sweepSpeed;
@@ -299,6 +300,15 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+let laserArr=laserSystem.lasers
+const transformLaser = createSyncLaserSystem(
+  laserArr, // 你的激光实例数组
+  1,
+  t =>t * t // 缓入缓出效果
+);
+transformLaser.start()
+
+console.log('laserArr1',laserArr)
   /**
    * startPosition: new THREE.Vector3(10, 0, 0),
     endPosition: new THREE.Vector3(7,-10, 10),
