@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES加密解密工具</title>
+    <script src="./crypto-js.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-group button {
+            flex: 1;
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+        .message-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+        .message-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .message-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .message-content {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .message-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .message-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .result-area {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-label {
+            display: block;
+            padding: 12px;
+            background: #e9ecef;
+            border: 2px dashed #6c757d;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .file-label:hover {
+            background: #dee2e6;
+            border-color: #667eea;
+        }
+        .config-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+            position: fixed;
+            left: 50%;
+            transform: translate(-50%, 10%); /* 向左和向上移动自身宽度的50% */
+            background-color: #fff;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            z-index: 1000; /* 确保弹窗在页面上层 */
+            display: none;
+            text-align: center;
+            max-width: 200px;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+       <div id="messageBox" class="alert"></div>
+
+    <div class="container">
+  
+        <div class="main-content">
+            <!-- 加密区域 -->
+            <div class="section">
+                <h2>🔒 加密配置</h2>
+                
+                <div class="config-group">
+                    <div class="form-group">
+                        <label for="mode">加密模式</label>
+                        <select id="mode">
+                            <option value="CBC">CBC</option>
+                            <option value="CFB">CFB</option>
+                            <option value="OFB">OFB</option>
+                            <option value="CTR">CTR</option>
+                            <option value="ECB">ECB</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="padding">填充方式</label>
+                        <select id="padding">
+                            <option value="Pkcs7">Pkcs7</option>
+                            <option value="Iso97971">Iso97971</option>
+                            <option value="AnsiX923">AnsiX923</option>
+                            <option value="Iso10126">Iso10126</option>
+                            <option value="ZeroPadding">ZeroPadding</option>
+                            <option value="NoPadding">NoPadding</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">密码（用于生成密钥）</label>
+                    <input type="password" id="password" placeholder="输入密码自动生成密钥">
+                    <button onclick="generateKey()" class="btn-secondary">生成密钥</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="key">密钥（直接输入）</label>
+                    <input type="text" id="key" placeholder="或直接输入AES密钥">
+                </div>
+
+                <h2>📝 消息管理</h2>
+                
+                <div class="form-group">
+                    <label for="messageTitle">标题</label>
+                    <input type="text" id="messageTitle" placeholder="输入消息标题">
+                </div>
+
+                <div class="form-group">
+                    <label for="messageContent">内容</label>
+                    <textarea id="messageContent" rows="3" placeholder="输入消息内容"></textarea>
+                </div>
+
+                <button onclick="addMessage()" class="btn-success">添加消息</button>
+
+                <div class="message-list" id="messageList">
+                    <div class="empty-state">
+                        <div>📋</div>
+                        <p>暂无消息，请添加消息</p>
+                    </div>
+                </div>
+
+                <button onclick="encryptAll()" class="btn-success">加密所有消息</button>
+            </div>
+
+            <!-- 解密区域 -->
+            <div class="section">
+                <h2>🔓 解密配置</h2>
+                
+                <div class="config-group">
+                    <div class="form-group">
+                        <label for="decryptMode">加密模式</label>
+                        <select id="decryptMode">
+                            <option value="CBC">CBC</option>
+                            <option value="CFB">CFB</option>
+                            <option value="OFB">OFB</option>
+                            <option value="CTR">CTR</option>
+                            <option value="ECB">ECB</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="decryptPadding">填充方式</label>
+                        <select id="decryptPadding">
+                            <option value="Pkcs7">Pkcs7</option>
+                            <option value="Iso97971">Iso97971</option>
+                            <option value="AnsiX923">AnsiX923</option>
+                            <option value="Iso10126">Iso10126</option>
+                            <option value="ZeroPadding">ZeroPadding</option>
+                            <option value="NoPadding">NoPadding</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="decryptKey">解密密钥</label>
+                    <input type="text" id="decryptKey" placeholder="输入解密密钥">
+                </div>
+
+                <div class="form-group">
+                    <label for="ciphertext">密文输入</label>
+                    <textarea id="ciphertext" rows="4" placeholder="粘贴密文内容"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="file-label" for="fileInput">
+                        📁 点击选择或拖拽文件到此处
+                    </label>
+                    <input type="file" id="fileInput" class="file-input" accept=".txt">
+                </div>
+
+                <button onclick="decryptText()" class="btn-success">解密文本</button>
+
+                <h2>📄 解密结果</h2>
+                <div class="result-area" id="decryptResult">
+                    <div class="empty-state">
+                        <div>🔍</div>
+                        <p>解密结果将显示在这里</p>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button onclick="copyResult()" class="btn-secondary">复制结果</button>
+                    <button onclick="downloadResult()" class="btn-success">下载结果</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储消息列表
+        let messages = [];
+        let currentEncryptedResult = '';
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 文件上传处理
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            // 拖拽文件处理
+            const fileLabel = document.querySelector('.file-label');
+            fileLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#dee2e6';
+                fileLabel.style.borderColor = '#667eea';
+            });
+            
+            fileLabel.addEventListener('dragleave', () => {
+                fileLabel.style.background = '#e9ecef';
+                fileLabel.style.borderColor = '#6c757d';
+            });
+            
+            fileLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#e9ecef';
+                fileLabel.style.borderColor = '#6c757d';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileUpload({ target: fileInput });
+                }
+            });
+        });
+
+        // 生成密钥
+        function generateKey() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showMessage('请输入密码', 'danger');
+                return;
+            }
+            
+            // 使用PBKDF2生成密钥
+            const salt = CryptoJS.lib.WordArray.random(128/8);
+            const key = CryptoJS.PBKDF2(password, salt, {
+                keySize: 256/32,
+                iterations: 10000
+            });
+            
+            document.getElementById('key').value = key.toString();
+            showMessage('密钥已生成并填充', 'success');
+        }
+
+        // 添加消息
+        function addMessage() {
+            const title = document.getElementById('messageTitle').value;
+            const content = document.getElementById('messageContent').value;
+            
+            if (!title || !content) {
+                showMessage('请填写标题和内容', 'danger');
+                return;
+            }
+            
+            messages.push({ title, content });
+            renderMessages();
+            
+            // 清空输入框
+            document.getElementById('messageTitle').value = '';
+            document.getElementById('messageContent').value = '';
+            
+            showMessage('消息已添加', 'success');
+        }
+
+        // 渲染消息列表
+        function renderMessages() {
+            const messageList = document.getElementById('messageList');
+            
+            if (messages.length === 0) {
+                messageList.innerHTML = `
+                    <div class="empty-state">
+                        <div>📋</div>
+                        <p>暂无消息，请添加消息</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messageList.innerHTML = messages.map((message, index) => `
+                <div class="message-item">
+                    <div class="message-header">
+                        <span class="message-title">${escapeHtml(message.title)}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message.content)}</div>
+                    <div class="message-actions">
+                        <button onclick="editMessage(${index})" class="btn-secondary">编辑</button>
+                        <button onclick="deleteMessage(${index})" class="btn-danger">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 编辑消息
+        function editMessage(index) {
+            const message = messages[index];
+            document.getElementById('messageTitle').value = message.title;
+            document.getElementById('messageContent').value = message.content;
+            deleteMessage(index);
+        }
+
+        // 删除消息
+        function deleteMessage(index) {
+            messages.splice(index, 1);
+            renderMessages();
+            showMessage('消息已删除', 'success');
+        }
+
+        // 加密所有消息
+        function encryptAll() {
+            if (messages.length === 0) {
+                showMessage('请先添加消息', 'danger');
+                return;
+            }
+            
+            const key = document.getElementById('key').value;
+            if (!key) {
+                showMessage('请先生成或输入密钥', 'danger');
+                return;
+            }
+            
+            const mode = document.getElementById('mode').value;
+            const padding = document.getElementById('padding').value;
+            const key32 = CryptoJS.enc.Utf8.parse(key); // 32字节
+            
+            try {
+                    // 生成随机 IV（16字节）
+                   const iv = CryptoJS.lib.WordArray.random(16);
+                   const encrypted = CryptoJS.AES.encrypt(
+                        JSON.stringify(messages),
+                        key32,
+                        {   iv: iv,
+                            mode: CryptoJS.mode[mode],
+                            padding: CryptoJS.pad[padding]
+                        }
+                    );
+                    // 将 IV 和密文组合：IV + 密文
+                    const ivBase64 = CryptoJS.enc.Base64.stringify(iv);
+                    const encryptedBase64=encrypted.toString();
+
+                    const cipherAlltextBase64 =ivBase64 + encryptedBase64;
+
+                    const rawData = iv.concat(encrypted.ciphertext);
+                    const combined = CryptoJS.enc.Base64.stringify(rawData);
+                    const info={
+                        ivBase64:ivBase64,
+                        okey:key,
+                        utf8Key:key32.toString(),
+                        iVCombinedRaw:combined,
+                        ciphertextBase64:encryptedBase64,
+                        iVciphertextBase64:cipherAlltextBase64
+                    }
+                    // 32字节密钥 = AES-256
+                        console.table(info);
+
+                // 显示在解密区域的密文框中
+                document.getElementById('ciphertext').value = combined
+                document.getElementById('decryptMode').value = mode;
+                document.getElementById('decryptPadding').value = padding;
+                document.getElementById('decryptKey').value = key;
+                
+                showMessage('加密成功！密文已复制到解密区域', 'success');
+            } catch (error) {
+                showMessage('加密失败: ' + error.message, 'danger');
+            }
+        }
+
+        // 解密文本
+        function decryptText() {
+            const ciphertext = document.getElementById('ciphertext').value;
+            const key = document.getElementById('decryptKey').value;
+            const mode = document.getElementById('decryptMode').value;
+            const padding = document.getElementById('decryptPadding').value;
+            
+            if (!ciphertext || !key) {
+                showMessage('请提供密文和密钥', 'danger');
+                return;
+            }
+
+         let decryptedData=[];
+            
+            try {
+                try {
+                    // 尝试解析为JSON格式（可能是加密的消息列表）
+                     const bytes = CryptoJS.AES.decrypt(ciphertext, key, {
+                                mode: CryptoJS.mode[encryptedObj.mode || mode],
+                                padding: CryptoJS.pad[encryptedObj.padding || padding]
+                            });
+                     decryptedData= JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                } catch (e) {
+                    // 如果不是JSON格式，直接解密单条消息
+                    // const bytes = CryptoJS.AES.decrypt(ciphertext, key, {
+                    //     mode: CryptoJS.mode[mode],
+                    //     padding: CryptoJS.pad[padding]
+                    // });
+                    // decryptedData = [JSON.parse(bytes.toString(CryptoJS.enc.Utf8))];
+                    showMessage(e,'danger')
+                }
+
+                if(!Array.isArray(decryptedData)){
+                    return;
+                }
+                const resultArea = document.getElementById('decryptResult');
+                resultArea.innerHTML = decryptedData.map(item => `
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-title">${escapeHtml(item.title)}</span>
+                        </div>
+                        <div class="message-content">${escapeHtml(item.content)}</div>
+                    </div>
+                `).join('');
+                
+                showMessage('解密成功！', 'success');
+            } catch (error) {
+                showMessage('解密失败: ' + error.message, 'danger');
+            }
+        }
+
+        // 文件上传处理
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('ciphertext').value = e.target.result;
+                showMessage('文件已加载', 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        // 复制结果
+        function copyResult() {
+            const result = document.getElementById('decryptResult').textContent;
+            navigator.clipboard.writeText(result).then(() => {
+                showMessage('结果已复制到剪贴板', 'success');
+            });
+        }
+
+        // 下载结果
+        function downloadResult() {
+            const result = document.getElementById('decryptResult').textContent;
+            const blob = new Blob([result], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'decrypted_result.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 显示提示信息
+        function showMessage(message, type) {
+            // 移除现有的提示
+            const messageBox = document.getElementById('messageBox');
+            if(!messageBox){
+                return;
+            }
+            messageBox.className = `alert alert-${type}`;
+            messageBox.textContent = message;
+            messageBox.style.display = 'block'; // 显示消息框
+      
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+              messageBox.style.display = 'none'; // 显示消息框
+            }, 3000);
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
