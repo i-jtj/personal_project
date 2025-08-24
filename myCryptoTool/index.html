@@ -330,7 +330,11 @@
 
                 <div class="form-group">
                     <label for="ciphertext">密文输入</label>
-                    <textarea id="ciphertext" rows="4" placeholder="粘贴密文内容"></textarea>
+                    <textarea id="ciphertext" rows="4" placeholder="粘贴密文（base64）内容"></textarea>
+                </div>
+                  <div class="form-group">
+                    <label for="ciphertextIv">IV输入</label>
+                       <input type="text" id="ciphertextIv" placeholder="若密文不包含iv,请输入（base64）Iv">
                 </div>
 
                 <div class="form-group">
@@ -403,9 +407,10 @@
             }
             
             // 使用PBKDF2生成密钥
-            const salt = CryptoJS.lib.WordArray.random(128/8);
+            // const salt = CryptoJS.lib.WordArray.random(128/8);
+            const salt="52$87gdfkjg@"
             const key = CryptoJS.PBKDF2(password, salt, {
-                keySize: 256/32,
+                keySize: 128/32,
                 iterations: 10000
             });
             
@@ -516,7 +521,7 @@
                         ivBase64:ivBase64,
                         okey:key,
                         utf8Key:key32.toString(),
-                        iVCombinedRaw:combined,
+                        iVCombinedRawBase64:combined,
                         ciphertextBase64:encryptedBase64,
                         iVciphertextBase64:cipherAlltextBase64
                     }
@@ -524,11 +529,11 @@
                         console.table(info);
 
                 // 显示在解密区域的密文框中
-                document.getElementById('ciphertext').value = combined
+                document.getElementById('ciphertext').value = encryptedBase64
                 document.getElementById('decryptMode').value = mode;
                 document.getElementById('decryptPadding').value = padding;
                 document.getElementById('decryptKey').value = key;
-                
+                document.getElementById('ciphertextIv').value=ivBase64;
                 showMessage('加密成功！密文已复制到解密区域', 'success');
             } catch (error) {
                 showMessage('加密失败: ' + error.message, 'danger');
@@ -537,39 +542,49 @@
 
         // 解密文本
         function decryptText() {
-            const ciphertext = document.getElementById('ciphertext').value;
+            const ciphertextBase64 = document.getElementById('ciphertext').value;
             const key = document.getElementById('decryptKey').value;
             const mode = document.getElementById('decryptMode').value;
             const padding = document.getElementById('decryptPadding').value;
-            
-            if (!ciphertext || !key) {
+            const ivBase64 =  document.getElementById('ciphertextIv').value;
+            if (!ciphertextBase64 || !key) {
                 showMessage('请提供密文和密钥', 'danger');
                 return;
             }
 
-         let decryptedData=[];
-            
+              // 解码Base64
+            const combined = CryptoJS.enc.Base64.parse(ciphertextBase64);
+            const ciphertext = CryptoJS.lib.WordArray.create(combined.words);
+            const key32 = CryptoJS.enc.Utf8.parse(key); // 32字节
+            const obj={
+                mode: CryptoJS.mode[mode],
+                padding: CryptoJS.pad[padding]
+            }
+
+            if(ivBase64){
+                const iVcombined =  CryptoJS.enc.Base64.parse(ivBase64);
+                const iv = CryptoJS.lib.WordArray.create(iVcombined.words);
+                obj['iv']=iv;
+            }
+
+            let decryptedData=[];
             try {
-                try {
                     // 尝试解析为JSON格式（可能是加密的消息列表）
-                     const bytes = CryptoJS.AES.decrypt(ciphertext, key, {
-                                mode: CryptoJS.mode[encryptedObj.mode || mode],
-                                padding: CryptoJS.pad[encryptedObj.padding || padding]
-                            });
-                     decryptedData= JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-                } catch (e) {
-                    // 如果不是JSON格式，直接解密单条消息
-                    // const bytes = CryptoJS.AES.decrypt(ciphertext, key, {
-                    //     mode: CryptoJS.mode[mode],
-                    //     padding: CryptoJS.pad[padding]
-                    // });
-                    // decryptedData = [JSON.parse(bytes.toString(CryptoJS.enc.Utf8))];
-                    showMessage(e,'danger')
-                }
+                     const bytes = CryptoJS.AES.decrypt({ciphertext:ciphertext}, key32, obj);
+                    const jsonStr=bytes.toString(CryptoJS.enc.Utf8);
+                     console.log('bytes.toString()',jsonStr,bytes)
+
+                    if(jsonStr){
+                         decryptedData= JSON.parse(jsonStr);
+
+                    }
+                    
+               
 
                 if(!Array.isArray(decryptedData)){
                     return;
                 }
+                console.log(obj,'decryptedData=',decryptedData,'key=',key,'ciphertext=',combined)
                 const resultArea = document.getElementById('decryptResult');
                 resultArea.innerHTML = decryptedData.map(item => `
                     <div class="message-item">
