@@ -222,6 +222,15 @@
             margin-bottom: 15px;
             opacity: 0.5;
         }
+        .ecryptInfo-box{
+            margin-top: 30px;
+        }
+        .ecryptInfo-ontent{
+            width: 100%;
+            word-break: break-all;
+            height: 300px;
+            overflow: auto;
+        }
     </style>
 </head>
 <body>
@@ -292,6 +301,13 @@
                 </div>
 
                 <button onclick="encryptAll()" class="btn-success">加密所有消息</button>
+
+                <div class="form-group ecryptInfo-box">
+                    <label for="ecryptInfo">（用于保存）的加密信息</label>
+                  <div class="ecryptInfo-ontent" id="ecryptInfo"></div>
+                    <button onclick="copyEcryptInfo()" class="btn-secondary">复制（用于保存）的加密信息</button>
+
+                </div>
             </div>
 
             <!-- 解密区域 -->
@@ -337,12 +353,7 @@
                        <input type="text" id="ciphertextIv" placeholder="若密文不包含iv,请输入（base64）Iv">
                 </div>
 
-                <div class="form-group">
-                    <label class="file-label" for="fileInput">
-                        📁 点击选择或拖拽文件到此处
-                    </label>
-                    <input type="file" id="fileInput" class="file-input" accept=".txt">
-                </div>
+        
 
                 <button onclick="decryptText()" class="btn-success">解密文本</button>
 
@@ -368,36 +379,7 @@
         let currentEncryptedResult = '';
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            // 文件上传处理
-            const fileInput = document.getElementById('fileInput');
-            fileInput.addEventListener('change', handleFileUpload);
-            
-            // 拖拽文件处理
-            const fileLabel = document.querySelector('.file-label');
-            fileLabel.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                fileLabel.style.background = '#dee2e6';
-                fileLabel.style.borderColor = '#667eea';
-            });
-            
-            fileLabel.addEventListener('dragleave', () => {
-                fileLabel.style.background = '#e9ecef';
-                fileLabel.style.borderColor = '#6c757d';
-            });
-            
-            fileLabel.addEventListener('drop', (e) => {
-                e.preventDefault();
-                fileLabel.style.background = '#e9ecef';
-                fileLabel.style.borderColor = '#6c757d';
-                
-                if (e.dataTransfer.files.length > 0) {
-                    fileInput.files = e.dataTransfer.files;
-                    handleFileUpload({ target: fileInput });
-                }
-            });
-        });
-
+      
         // 生成密钥
         function generateKey() {
             const password = document.getElementById('password').value;
@@ -497,7 +479,7 @@
             const mode = document.getElementById('mode').value;
             const padding = document.getElementById('padding').value;
             const key32 = CryptoJS.enc.Utf8.parse(key); // 32字节
-            
+            const ecryptInfo=document.getElementById('ecryptInfo')
             try {
                     // 生成随机 IV（16字节）
                    const iv = CryptoJS.lib.WordArray.random(16);
@@ -523,11 +505,36 @@
                         utf8Key:key32.toString(),
                         iVCombinedRawBase64:combined,
                         ciphertextBase64:encryptedBase64,
-                        iVciphertextBase64:cipherAlltextBase64
+                        iVciphertextBase64:cipherAlltextBase64,
+                        mode:mode
                     }
                     // 32字节密钥 = AES-256
                         console.table(info);
+                   
+                        let infoStr=`
+                        默认加密模式：AES-256，填充：${mode}</br></br>
+                        密钥：【${key}】</br></br>
+                        初始化向量(iv)+密文二进制拼接(Base64)：【${combined}】</br></br>
+                        初始化向量(iv)(Base64)：【${ivBase64}】</br></br>
+                        纯(Base64)密文：【${encryptedBase64}】</br></br>
+                      
+                        初始化向量(iv)+密文二进制拼接(Base64)使用方式： $data = base64_decode($encryptedData)进行Base64解码，提取二进制内容， substr($data, 0, 16) 前16字节为iv,剩余部分为密文。</br></br>
 
+                        [AES加密模式对应关系说明]：</br>
+                        密钥长度 对应AES模式   密钥字节数	密钥位数</br>
+                        16字节	 AES-128	  16 bytes	  128 bits</br>
+                        24字节	 AES-192	  24 bytes	  192 bits</br>
+                        32字节	 AES-256	  32 bytes    256 bits</br>
+
+                        [密钥生成方式说明]：</br>
+                         const salt="52$87gdfkjg@"
+                        const key = CryptoJS.PBKDF2(password, salt, {
+                            keySize: 128/32,
+                            iterations: 10000
+                        });
+                        salt为自定义盐，iterations迭代次数，通过相同的盐、迭代次数可生生成相同的密钥
+                        `
+                    ecryptInfo.innerHTML=infoStr
                 // 显示在解密区域的密文框中
                 document.getElementById('ciphertext').value = encryptedBase64
                 document.getElementById('decryptMode').value = mode;
@@ -619,6 +626,14 @@
             const result = document.getElementById('decryptResult').textContent;
             navigator.clipboard.writeText(result).then(() => {
                 showMessage('结果已复制到剪贴板', 'success');
+            });
+        }
+
+        // 复制（用于保存）的加密信息
+        function copyEcryptInfo(){
+            const result = document.getElementById('ecryptInfo').textContent;
+            navigator.clipboard.writeText(result).then(() => {
+                showMessage('（用于保存）的加密信息已复制到剪贴板', 'success');
             });
         }
 
