@@ -517,22 +517,26 @@
                         初始化向量(iv)+密文二进制拼接(Base64)：【${combined}】</br></br>
                         初始化向量(iv)(Base64)：【${ivBase64}】</br></br>
                         纯(Base64)密文：【${encryptedBase64}】</br></br>
-                      
-                        初始化向量(iv)+密文二进制拼接(Base64)使用方式： $data = base64_decode($encryptedData)进行Base64解码，提取二进制内容， substr($data, 0, 16) 前16字节为iv,剩余部分为密文。</br></br>
+                
 
-                        [AES加密模式对应关系说明]：</br>
+                        【AES加密模式对应关系说明】：</br>
                         密钥长度 对应AES模式   密钥字节数	密钥位数</br>
                         16字节	 AES-128	  16 bytes	  128 bits</br>
                         24字节	 AES-192	  24 bytes	  192 bits</br>
                         32字节	 AES-256	  32 bytes    256 bits</br>
 
-                        [密钥生成方式说明]：</br>
-                         const salt="52$87gdfkjg@"
+                        【本工具密钥生成方式说明】：</br>
+                        工具密钥生成：库为【CryptoJS.PBKDF2】，盐：【52$87gdfkjg@】，迭代次数：10000，密钥长度32字符</br>
+                        过程：【 const salt="52$87gdfkjg@"
                         const key = CryptoJS.PBKDF2(password, salt, {
                             keySize: 128/32,
                             iterations: 10000
-                        });
-                        salt为自定义盐，iterations迭代次数，通过相同的盐、迭代次数可生生成相同的密钥
+                        });】
+                        salt为自定义盐52$87gdfkjg@，iterations迭代次数，通过相同的盐、迭代次数可生生成相同的密钥。</br></br>
+
+                        【加、解密】：
+                        原始密钥需经过经过CryptoJS.enc.Utf8.parse(key) UTF8解码</br></br>
+                          初始化向量(iv)+密文二进制拼接(Base64)使用方式： $data = base64_decode($encryptedData)进行Base64解码，提取二进制内容， substr($data, 0, 16) 前16字节为iv,剩余部分为密文。
                         `
                     ecryptInfo.innerHTML=infoStr
                 // 显示在解密区域的密文框中
