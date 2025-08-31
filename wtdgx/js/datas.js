@@ -27,4 +27,33 @@ const laserGroupArr = [
       sweepSpeed:0
     },
 ]
-export {laserGroupArr}
+
+  function isObj(data){
+    return Object.prototype.toString.call(data) === '[object Object]'
+  }
+
+function getLaserGroups(num=3,start={x:-10,y:0,z:0}){
+  let res=[];
+  if(num==null || !isObj(start) || num<=0){
+    return res;
+  }
+  let x=-10, y=-35,z=8
+  let item = null;
+  for(let i=0;i<num;i++){
+    x-=i
+    y-=i
+    z-=i
+    item ={
+          startPosition: {...start},
+          endPosition: {x:x,y:y,z:z},
+          color: 0x55aaff,
+          width: 1.5,
+          brightness: 2,
+          sweepRange:0,
+          sweepSpeed:0
+        }
+    res.push(item)
+  }
+  return res;
+}
+export {laserGroupArr,getLaserGroups}

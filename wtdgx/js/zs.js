@@ -1,4 +1,4 @@
-import {laserGroupArr} from './datas.js'
+import {laserGroupArr,getLaserGroups} from './datas.js'
 import {createSyncLaserSystem} from './transform.js'
 
 // 1. 初始化场景
@@ -291,8 +291,8 @@ function animate() {
 animate();
 
 addLaserGroup(laserGroupArr)
-
-
+addLaserGroup(getLaserGroups(3))
+// addLaserGroup(getLaserGroups(3,{x:0,y:0,z:0}))
 // 8. 窗口大小调整
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -308,7 +308,7 @@ const transformLaser = createSyncLaserSystem(
 );
 transformLaser.start()
 
-console.log('laserArr1',laserArr)
+console.log('laserArr1',getLaserGroups())
   /**
    * startPosition: new THREE.Vector3(10, 0, 0),
     endPosition: new THREE.Vector3(7,-10, 10),
