@@ -303,7 +303,7 @@ window.addEventListener('resize', () => {
 let laserArr=laserSystem.lasers
 const transformLaser = createSyncLaserSystem(
   laserArr, // 你的激光实例数组
-  1,
+  0.5,
   t =>t * t // 缓入缓出效果
 );
 transformLaser.start()

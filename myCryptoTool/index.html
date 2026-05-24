@@ -234,14 +234,14 @@
     </style>
 </head>
 <body>
+
        <div id="messageBox" class="alert"></div>
 
     <div class="container">
-  
         <div class="main-content">
             <!-- 加密区域 -->
             <div class="section">
-                <h2>🔒 加密配置</h2>
+                <h2>🔒 AES加密配置</h2>
                 
                 <div class="config-group">
                     <div class="form-group">
@@ -312,7 +312,7 @@
 
             <!-- 解密区域 -->
             <div class="section">
-                <h2>🔓 解密配置</h2>
+                <h2>🔓 AES解密配置</h2>
                 
                 <div class="config-group">
                     <div class="form-group">
@@ -343,18 +343,23 @@
                     <label for="decryptKey">解密密钥</label>
                     <input type="text" id="decryptKey" placeholder="输入解密密钥">
                 </div>
-
-                <div class="form-group">
+                 <div class="form-group">
                     <label for="ciphertext">密文输入</label>
                     <textarea id="ciphertext" rows="4" placeholder="粘贴密文（base64）内容"></textarea>
                 </div>
+            
                   <div class="form-group">
                     <label for="ciphertextIv">IV输入</label>
                        <input type="text" id="ciphertextIv" placeholder="若密文不包含iv,请输入（base64）Iv">
                 </div>
 
+                <div class="form-group">
+                    <label class="file-label" for="fileInput">
+                        密文导入(点击选择或拖拽文件到此处)
+                    </label>
+                    <input type="file" id="fileInput" class="file-input" accept=".txt">
+                </div>
         
-
                 <button onclick="decryptText()" class="btn-success">解密文本</button>
 
                 <h2>📄 解密结果</h2>
@@ -379,7 +384,37 @@
         let currentEncryptedResult = '';
 
         // 初始化
-      
+        document.addEventListener('DOMContentLoaded', function() {
+            // 文件上传处理
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            // 拖拽文件处理
+            const fileLabel = document.querySelector('.file-label');
+            fileLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#dee2e6';
+                fileLabel.style.borderColor = '#667eea';
+            });
+            
+            fileLabel.addEventListener('dragleave', () => {
+                fileLabel.style.background = '#e9ecef';
+                fileLabel.style.borderColor = '#6c757d';
+            });
+            
+            fileLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#e9ecef';
+                fileLabel.style.borderColor = '#6c757d';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileUpload({ target: fileInput });
+                }
+            });
+        });
+
+
         // 生成密钥
         function generateKey() {
             const password = document.getElementById('password').value;
@@ -397,6 +432,7 @@
             });
             
             document.getElementById('key').value = key.toString();
+            document.getElementById('decryptKey').value = key.toString();
             showMessage('密钥已生成并填充', 'success');
         }
 
@@ -512,7 +548,7 @@
                         console.table(info);
                    
                         let infoStr=`
-                        默认加密模式：AES-256，填充：${mode}</br></br>
+                        默认加密模式：AES-256，填充：${padding}</br></br>
                         密钥：【${key}】</br></br>
                         初始化向量(iv)+密文二进制拼接(Base64)：【${combined}】</br></br>
                         初始化向量(iv)(Base64)：【${ivBase64}】</br></br>
@@ -552,77 +588,134 @@
         }
 
         // 解密文本
-        function decryptText() {
+       function decryptText() {
+        // 设置加密回填
+         const encryptKey = document.getElementById('key');
+        const encryptMode = document.getElementById('mode');
+        const encryptPadding = document.getElementById('padding');
+
             const ciphertextBase64 = document.getElementById('ciphertext').value;
             const key = document.getElementById('decryptKey').value;
             const mode = document.getElementById('decryptMode').value;
             const padding = document.getElementById('decryptPadding').value;
-            const ivBase64 =  document.getElementById('ciphertextIv').value;
+            const ivBase64 = document.getElementById('ciphertextIv').value;
+             const resultArea = document.getElementById('decryptResult');
             if (!ciphertextBase64 || !key) {
                 showMessage('请提供密文和密钥', 'danger');
                 return;
             }
 
-              // 解码Base64
-            const combined = CryptoJS.enc.Base64.parse(ciphertextBase64);
-            const ciphertext = CryptoJS.lib.WordArray.create(combined.words);
-            const key32 = CryptoJS.enc.Utf8.parse(key); // 32字节
-            const obj={
-                mode: CryptoJS.mode[mode],
-                padding: CryptoJS.pad[padding]
-            }
-
-            if(ivBase64){
-                const iVcombined =  CryptoJS.enc.Base64.parse(ivBase64);
-                const iv = CryptoJS.lib.WordArray.create(iVcombined.words);
-                obj['iv']=iv;
-            }
-
-            let decryptedData=[];
             try {
-                    // 尝试解析为JSON格式（可能是加密的消息列表）
-                     const bytes = CryptoJS.AES.decrypt({ciphertext:ciphertext}, key32, obj);
-                    const jsonStr=bytes.toString(CryptoJS.enc.Utf8);
-                     console.log('bytes.toString()',jsonStr,bytes)
+                // 解析密文
+                const ciphertextData = CryptoJS.enc.Base64.parse(ciphertextBase64);
+                const key32 = CryptoJS.enc.Utf8.parse(key);
+                
+                const options = {
+                    mode: CryptoJS.mode[mode],
+                    padding: CryptoJS.pad[padding]
+                };
 
-                    if(jsonStr){
-                         decryptedData= JSON.parse(jsonStr);
+                let iv;
+                let actualCiphertext;
 
-                    }
+                // 情况1：用户明确提供了IV
+                if (ivBase64 && ivBase64.trim() !== '') {
+                    iv = CryptoJS.enc.Base64.parse(ivBase64);
+                    actualCiphertext = ciphertextData; // 使用完整的密文
+                } 
+                // 情况2：自动从密文前面截取IV（假设前16字节是IV）
+                else if (ciphertextData.sigBytes >= 16) {
+                    // 前16字节作为IV
+                    iv = CryptoJS.lib.WordArray.create(ciphertextData.words.slice(0, 4));
+                    // 剩余部分作为实际密文
+                    actualCiphertext = CryptoJS.lib.WordArray.create(ciphertextData.words.slice(4));
+                    actualCiphertext.sigBytes = ciphertextData.sigBytes - 16;
                     
-               
-
-                if(!Array.isArray(decryptedData)){
+                    console.log('自动提取IV: 长度', iv.sigBytes, '字节');
+                }
+                // 情况3：无法获取IV
+                else {
+                    showMessage('无法获取IV，请提供IV或使用包含IV的密文', 'danger');
                     return;
                 }
-                console.log(obj,'decryptedData=',decryptedData,'key=',key,'ciphertext=',combined)
-                const resultArea = document.getElementById('decryptResult');
-                resultArea.innerHTML = decryptedData.map(item => `
-                    <div class="message-item">
-                        <div class="message-header">
-                            <span class="message-title">${escapeHtml(item.title)}</span>
-                        </div>
-                        <div class="message-content">${escapeHtml(item.content)}</div>
-                    </div>
-                `).join('');
+
+                // 设置IV到选项
+                if (iv) {
+                    options.iv = iv;
+                    console.log('使用IV: 长度', iv.sigBytes, '字节');
+                }
+
+                // 执行解密
+                const bytes = CryptoJS.AES.decrypt(
+                    { ciphertext: actualCiphertext },
+                    key32,
+                    options
+                );
                 
-                showMessage('解密成功！', 'success');
+                const jsonStr = bytes.toString(CryptoJS.enc.Utf8);
+                if (jsonStr) {
+                    const decryptedData = JSON.parse(jsonStr);
+                    // 显示解密结果...
+                        resultArea.innerHTML = decryptedData.map(item => `
+                            <div class="message-item">
+                                <div class="message-header">
+                                    <span class="message-title">${escapeHtml(item.title)}</span>
+                                </div>
+                                <div class="message-content">${escapeHtml(item.content)}</div>
+                            </div>
+                        `).join('');
+
+                        // 回填解密消息
+                       messages=[]
+                        decryptedData.forEach(item => {
+                            messages.push({ title:item.title, content:item.content });
+                        });
+                        renderMessages()
+                        encryptKey.value=key
+                    showMessage('解密成功！', 'success');
+                } else {
+                    showMessage('解密失败，请检查密钥和IV', 'danger');
+                }
+                
             } catch (error) {
                 showMessage('解密失败: ' + error.message, 'danger');
+                resultArea.innerHTML =''
             }
         }
 
         // 文件上传处理
         function handleFileUpload(event) {
             const file = event.target.files[0];
+
             if (!file) return;
             
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('ciphertext').value = e.target.result;
-                showMessage('文件已加载', 'success');
+                const fileValue=e.target.result
+                const ciphertextEl=document.getElementById('ciphertext')
+                const ciphertextIv=document.getElementById('ciphertextIv')
+                if(fileValue){
+                    const arr=fileValue.split('\n').filter(item=>isNeStr(item))
+                    if(arr.length===1){
+                        ciphertextEl.value = e.target.result;
+                         ciphertextIv.value=''
+                    }else if(arr.length>=2){
+                       ciphertextIv.value = arr[0];
+                        ciphertextEl.value = arr[1];
+                    }
+                    showMessage('文件已加载', 'success');
+                }else{
+                    showMessage('文件加载失败', 'danger');
+                }
+
+                document.getElementById('fileInput').value=null;
+
+         
             };
             reader.readAsText(file);
+        }
+        function isNeStr(value){
+            return  (typeof value === 'string' || value instanceof String) && value !== '';
         }
 
         // 复制结果
